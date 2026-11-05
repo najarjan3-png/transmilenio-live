@@ -1,0 +1,85 @@
+openapi: 3.1.0
+info:
+  title: TransMilenio Live Assistant Bridge
+  version: 1.0.0
+  description: Protected lookup of vehicles in the Croma Labs TransMilenio Live feed.
+servers:
+  - url: https://transmilenio-live-rho.vercel.app
+paths:
+  /api/assistant/fleet:
+    get:
+      operationId: findTransMilenioVehicles
+      summary: Find vehicles by plate, vehicle label, route, or last reported stop
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Plate, vehicle label, route code/name, or station/stop text.
+          schema:
+            type: string
+            maxLength: 80
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of matches to return (1–50).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: Matching vehicles and their last reported positions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  query:
+                    type: string
+                  asOf:
+                    type: string
+                    nullable: true
+                  fleetTotal:
+                    type: integer
+                  count:
+                    type: integer
+                  returned:
+                    type: integer
+                  matches:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        plate: { type: string, nullable: true }
+                        label: { type: string, nullable: true }
+                        routeId: { type: string, nullable: true }
+                        routeCode: { type: string, nullable: true }
+                        routeName: { type: string, nullable: true }
+                        system: { type: string, nullable: true }
+                        lastReportedStop: { type: string, nullable: true }
+                        stopStatus: { type: string, nullable: true }
+                        latitude: { type: number }
+                        longitude: { type: number }
+                        reportedAt: { type: string, nullable: true }
+                        reportAgeSeconds: { type: integer, nullable: true }
+                  note:
+                    type: string
+        "400":
+          description: Missing or invalid query.
+        "401":
+          description: Missing or invalid bearer token.
+        "502":
+          description: Upstream Croma API error.
+        "503":
+          description: Bridge token is not configured on the server.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
