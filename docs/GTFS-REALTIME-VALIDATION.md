@@ -4,7 +4,7 @@ This branch adds a protected diagnostic endpoint for the official TransMilenio V
 
 ## Endpoint
 
-`GET /api/gtfs/health`
+`GET /api/gtfs/health` (browser tester: `/gtfs-test`)
 
 Requires the existing `TRANSIT_BRIDGE_TOKEN` as a Bearer token. It downloads the official protobuf feed, decodes the GTFS-Realtime header and VehiclePosition entities, and reports:
 
