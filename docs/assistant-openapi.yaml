@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: Protected lookup of vehicles in the Croma Labs TransMilenio Live feed.
 servers:
-  - url: https://REPLACE-WITH-VERCEL-DOMAIN
+  - url: https://transmilenio-live-rho.vercel.app
 paths:
   /api/assistant/fleet:
     get:
