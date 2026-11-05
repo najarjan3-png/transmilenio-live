@@ -89,6 +89,9 @@ export interface GtfsFeedDiagnostics {
   vehicleEntityCount: number;
   positionedVehicleCount: number;
   missingPositionTimestampCount: number;
+  futureTimestampCount: number;
+  under30SecondsPercent: number | null;
+  under90SecondsPercent: number | null;
   ageSeconds: { min: number; median: number; p95: number; max: number } | null;
   samples: GtfsVehicleSample[];
 }
@@ -103,6 +106,7 @@ export function decodeVehiclePositions(buffer: Uint8Array, nowMs = Date.now()): 
   let vehicleEntityCount = 0;
   let positionedVehicleCount = 0;
   let missingPositionTimestampCount = 0;
+  let futureTimestampCount = 0;
 
   for (const entityField of entities) {
     if (!(entityField.value instanceof Uint8Array)) continue;
@@ -122,6 +126,7 @@ export function decodeVehiclePositions(buffer: Uint8Array, nowMs = Date.now()): 
     const timestamp = isoFromSeconds(numberField(vehicleFields, 5));
     const ageSeconds = timestamp ? Math.round((nowMs - Date.parse(timestamp)) / 1000) : null;
     if (ageSeconds === null) missingPositionTimestampCount++;
+    else if (ageSeconds < 0) futureTimestampCount++;
     else ages.push(ageSeconds);
 
     if (samples.length < 8) {
@@ -153,6 +158,9 @@ export function decodeVehiclePositions(buffer: Uint8Array, nowMs = Date.now()): 
     vehicleEntityCount,
     positionedVehicleCount,
     missingPositionTimestampCount,
+    futureTimestampCount,
+    under30SecondsPercent: ages.length ? Math.round((ages.filter((age) => age <= 30).length / ages.length) * 1000) / 10 : null,
+    under90SecondsPercent: ages.length ? Math.round((ages.filter((age) => age <= 90).length / ages.length) * 1000) / 10 : null,
     ageSeconds: min === null || max === null || median === null || p95 === null
       ? null
       : { min, median, p95, max },
