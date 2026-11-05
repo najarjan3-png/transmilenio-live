@@ -36,9 +36,27 @@ export async function GET(request: Request): Promise<Response> {
 
     const declaredLength = Number(response.headers.get("content-length") ?? 0);
     if (declaredLength > MAX_BYTES) return json({ ok: false, error: "El feed supera el límite de tamaño de diagnóstico." }, 502);
+    if (!response.body) return json({ ok: false, error: "El servidor no entregó un cuerpo de feed." }, 502);
 
-    const buffer = new Uint8Array(await response.arrayBuffer());
-    if (buffer.byteLength > MAX_BYTES) return json({ ok: false, error: "El feed supera el límite de tamaño de diagnóstico." }, 502);
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let totalBytes = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_BYTES) {
+        await reader.cancel();
+        return json({ ok: false, error: "El feed supera el límite de tamaño de diagnóstico." }, 502);
+      }
+      chunks.push(value);
+    }
+    const buffer = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      buffer.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
 
     const diagnostics = decodeVehiclePositions(buffer);
     const ages = diagnostics.ageSeconds;
@@ -53,10 +71,9 @@ export async function GET(request: Request): Promise<Response> {
       ...diagnostics,
       assessment: ages
         ? {
-            under30SecondsPercent: null,
             p95Under90Seconds: ages.p95 <= 90,
             oldestPositionSeconds: ages.max,
-            note: "El porcentaje bajo 30 segundos se medirá en un sondeo repetido; esta consulta mide la antigüedad de las posiciones en una sola captura.",
+            freshnessThresholds: "Percentages are calculated from non-future vehicle timestamps in this snapshot.",
           }
         : {
             p95Under90Seconds: false,
